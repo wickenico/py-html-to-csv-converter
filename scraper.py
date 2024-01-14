@@ -59,8 +59,8 @@ class Scraper:
         with open("output.csv", "w", newline="") as f:
             writer = csv.writer(f, delimiter=";")  # use semicolon as delimiter
             writer.writerow(
-                ["Seller", "Feedback Link", "Address", "Phone"]
-            )  # write the header
+                ["Seller", "Link", "Address", "Phone"]
+            )  # write the column header
 
             visited_links = set()  # keep track of visited links
 
@@ -80,7 +80,7 @@ class Scraper:
                     self.driver.execute_script("arguments[0].click();", link)
                     time.sleep(2)  # wait for the page to load
 
-                    # Extract the seller's name and the feedback link
+                    # Extract the column values, when not found, use "Not found" as the value
                     try:
                         seller_name = self.driver.find_element(
                             By.CSS_SELECTOR, ".seller-name"
