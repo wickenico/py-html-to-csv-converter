@@ -1,3 +1,4 @@
+from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -6,7 +7,8 @@ from selenium.common.exceptions import (
     TimeoutException,
     ElementClickInterceptedException,
 )
-import time, csv
+import csv
+import time
 
 
 class Scraper:
@@ -16,43 +18,40 @@ class Scraper:
     def load_page(self, url):
         self.driver.get(url)
 
+    def handle_overlay(self, overlay_selector):
+        try:
+            overlay = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, overlay_selector))
+            )
+            self.driver.execute_script(
+                "arguments[0].style.visibility='hidden'", overlay
+            )
+        except (NoSuchElementException, TimeoutException):
+            pass  # ignore if the overlay is not found
+
     def click_button(self, button_selector, content_selector):
         content = ""
         while True:
-            try:
-                # Handle the overlay
-                overlay_selector = ".onetrust-pc-dark-filter"
-                try:
-                    overlay = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located(
-                            (By.CSS_SELECTOR, overlay_selector)
-                        )
-                    )
-                    self.driver.execute_script(
-                        "arguments[0].style.visibility='hidden'", overlay
-                    )
-                except (NoSuchElementException, TimeoutException):
-                    pass  # ignore if the overlay is not found
+            self.handle_overlay(".onetrust-pc-dark-filter")
 
-                # Click the button
+            try:
                 button = WebDriverWait(self.driver, 10).until(
                     EC.element_to_be_clickable((By.CSS_SELECTOR, button_selector))
                 )
                 button.click()
                 time.sleep(2)  # wait for the page to load
+
                 new_content = self.driver.find_element(
                     By.CSS_SELECTOR, content_selector
                 ).get_attribute("innerHTML")
-                print(f"New content: {new_content}")  # print the new content
                 content += new_content
             except (
                 NoSuchElementException,
                 TimeoutException,
                 ElementClickInterceptedException,
-            ) as e:
-                print(f"Exception: {e}")  # print the exception
+            ):
                 break
-        print(f"Total content: {content}")  # print the total content
+
         return content
 
     def navigate_and_go_back(self, link_selector, button_selector, content_selector):
@@ -62,10 +61,9 @@ class Scraper:
                 ["Seller", "Link", "Address", "Phone"]
             )  # write the column header
 
-            visited_links = set()  # keep track of visited links
+            visited_links = set()
 
             while True:
-                # Find all the links
                 links = self.driver.find_elements(By.CSS_SELECTOR, link_selector)
 
                 for link in links:
@@ -74,52 +72,21 @@ class Scraper:
                     if url in visited_links:
                         continue
 
-                    visited_links.add(url)  # mark this link as visited
+                    visited_links.add(url)
 
-                    # Navigate to the link using JavaScript
                     self.driver.execute_script("arguments[0].click();", link)
                     time.sleep(2)  # wait for the page to load
 
-                    # Extract the column values, when not found, use "Not found" as the value
-                    try:
-                        seller_name = self.driver.find_element(
-                            By.CSS_SELECTOR, ".seller-name"
-                        ).text
-                    except NoSuchElementException:
-                        seller_name = "Not found"
+                    seller_name = self.get_text(".seller-name")
+                    feedback_link = self.get_attribute(".seller-feedback a", "href")
+                    address = self.get_text(".address address").replace("\n", " ")
+                    phone = self.get_text(".phone").split("\n")[-1]
 
-                    try:
-                        feedback_link = self.driver.find_element(
-                            By.CSS_SELECTOR, ".seller-feedback a"
-                        ).get_attribute("href")
-                    except NoSuchElementException:
-                        feedback_link = "Not found"
+                    writer.writerow([seller_name, feedback_link, address, phone])
 
-                    try:
-                        address = self.driver.find_element(
-                            By.CSS_SELECTOR, ".address address"
-                        ).text.replace("\n", " ")
-                    except NoSuchElementException:
-                        address = "Not found"
-
-                    try:
-                        phone = self.driver.find_element(
-                            By.CSS_SELECTOR, ".phone"
-                        ).text.split("\n")[
-                            -1
-                        ]  # get the last line of the phone div
-                    except NoSuchElementException:
-                        phone = "Not found"
-
-                    writer.writerow(
-                        [seller_name, feedback_link, address, phone]
-                    )  # write the data
-
-                    # Go back to the previous page
                     self.driver.back()
                     time.sleep(2)  # wait for the page to load
 
-                # Click the "Load More" button
                 try:
                     load_more_button = WebDriverWait(self.driver, 20).until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, button_selector))
@@ -131,11 +98,23 @@ class Scraper:
                 except (NoSuchElementException, TimeoutException):
                     break  # exit the loop if the "Load More" button is not found
 
+    def get_text(self, selector):
+        try:
+            return self.driver.find_element(By.CSS_SELECTOR, selector).text
+        except NoSuchElementException:
+            return "Not found"
+
+    def get_attribute(self, selector, attribute):
+        try:
+            return self.driver.find_element(By.CSS_SELECTOR, selector).get_attribute(
+                attribute
+            )
+        except NoSuchElementException:
+            return "Not found"
+
     def write_content_to_file(self, content, filename):
-        print(f"Writing to file: {filename}")  # print the filename
         with open(filename, "w") as f:
             f.write(content)
-        print("Done writing to file")  # print a message when done writing to the file
 
     def quit(self):
         self.driver.quit()
