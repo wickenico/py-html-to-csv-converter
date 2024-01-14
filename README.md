@@ -52,3 +52,8 @@ Open scraper.py in your preferred text editor and update the following:
 ## Contributing
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or create a pull request.
+
+## LICENSE
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
