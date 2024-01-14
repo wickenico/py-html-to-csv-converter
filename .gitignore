@@ -1,0 +1,33 @@
+# .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.pyz
+*.pyzw
+
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Selenium
+geckodriver.log
+chromedriver.log
+
+# macOS
+.DS_Store
+
+# Dev files
+extract-sellers.py
+output.csv
